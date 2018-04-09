@@ -1,0 +1,10 @@
+060418 - Drawing all visible objects on screen.
+070418 - Movement for players.
+080418 - Collision.
+090418 - Scoresystem.
+100418 - 
+110418 - Fuel/Refuel.
+120418 - Requirements check.
+130418 - Bufferday.
+140418 - Answer questions.
+150418 - Write report.
