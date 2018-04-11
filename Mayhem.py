@@ -9,6 +9,8 @@ class Screen:
         self.screen = pygame.display.set_mode(screen_res)
         self.fps = fps
 
+        self.rect = self.screen.get_rect()
+
     def render(self):
         self.screen.fill([0, 0, 0])
 
@@ -90,18 +92,14 @@ class Player(pygame.sprite.Sprite):
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
 
-            return True
-
-        return False
-
     def collide_fuel_pad(self, fuel_pad):
         if pygame.sprite.collide_rect(self, fuel_pad):
 
             self.pos.y = self.original_pos.y
-            print(self.angle)
+            #print(self.angle)
 
             if self.pos.y <= fuel_pad.rect.top and self.angle < 340 and self.angle > 20:
-                print("fired")
+                #print("fired")
                 self.current_speed = 0
                 self.velocity = Vector2D(0, 0)
 
@@ -111,9 +109,18 @@ class Player(pygame.sprite.Sprite):
             self.image = self.image_original
             self.angle = 0
 
-            return True
+    def collide_screen(self, screen):
+        if pygame.sprite.collide_rect(self, screen) == 0:
+            self.pos = self.original_pos
 
-        return False
+            self.image = self.image_original
+            self.rect.center = (self.pos.x, self.pos.y)
+            self.angle = 0
+
+            self.velocity = Vector2D(0, 0)
+            self.current_speed = 0
+
+
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -154,6 +161,8 @@ def game():
     fuel_pad1 = FuelPad(pygame.image.load("fuel_pad.png"), 80, 530)
     fuel_pad2 = FuelPad(pygame.image.load("fuel_pad.png"), 720, 530)
 
+
+
     the_group.add(player1)
     the_group.add(player2)
 
@@ -177,10 +186,15 @@ def game():
         player1.accelerate(pygame.K_w, 5)
         player1.grav()
 
+        print(pygame.sprite.collide_rect(player1, the_screen))
+
         player1.collide_obstacle(obstacle1)
         player1.collide_obstacle(obstacle2)
         player1.collide_obstacle(obstacle3)
+
+        player1.collide_screen(the_screen)
         player1.collide_obstacle(player2)
+
         player1.collide_fuel_pad(fuel_pad1)
         player1.collide_fuel_pad(fuel_pad2)
 
@@ -190,8 +204,12 @@ def game():
         player2.collide_obstacle(obstacle1)
         player2.collide_obstacle(obstacle2)
         player2.collide_obstacle(obstacle3)
+
+        player2.collide_screen(the_screen)
         player2.collide_obstacle(player1)
 
+        player2.collide_fuel_pad(fuel_pad1)
+        player2.collide_fuel_pad(fuel_pad2)
 
         the_group.update()
         the_screen.render()
