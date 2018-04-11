@@ -35,8 +35,9 @@ class Player(pygame.sprite.Sprite):
         self.angle_rad = 0
 
         self.current_speed = 0
-
         self.velocity = Vector2D(0, 0)
+
+        self.score = 0
 
     def rotate(self, left, right):
 
@@ -58,13 +59,13 @@ class Player(pygame.sprite.Sprite):
         key = pygame.key.get_pressed()
 
         if not key[up]:
-            self.current_speed -= 0.03
+            self.current_speed -= 0.05
             if self.current_speed <= 0:
                 self.current_speed = 0
 
         if key[up]:
             angle = self.angle - 90
-            self.current_speed += 0.03
+            self.current_speed += 0.05
 
             if self.current_speed >= max_speed:
                 self.current_speed = max_speed
@@ -92,6 +93,8 @@ class Player(pygame.sprite.Sprite):
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
 
+            self.score -= 1
+
     def collide_fuel_pad(self, fuel_pad):
         if pygame.sprite.collide_rect(self, fuel_pad):
 
@@ -104,6 +107,8 @@ class Player(pygame.sprite.Sprite):
                 self.velocity = Vector2D(0, 0)
 
                 self.pos.x = self.original_pos.x
+
+                self.score -= 1
 
             self.rect.center = (self.pos.x, self.pos.y)
             self.image = self.image_original
@@ -120,7 +125,7 @@ class Player(pygame.sprite.Sprite):
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
 
-
+            self.score -= 1
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -133,8 +138,27 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect.center = (pos_x, pos_y)
 
 
-class Score(pygame.sprite.Sprite):
-    pass
+class Score:
+    def __init__(self, name, pos):
+        pygame.font.init()
+
+        self.name = name
+        self.score = 0
+
+        self.font = pygame.font.SysFont("Times New Roman", 30)
+        self.pos = Vector2D(pos.x, pos.y)
+
+        self.surface = None
+        self.score_number = None
+
+    def update_score(self, score):
+        self.score = score
+        self.surface = self.font.render(self.name + ":", 1, (255, 255, 255))
+        self.score_number = self.font.render(str(self.score), 1, (255, 255, 255))
+
+    def draw_score(self, screen):
+        screen.blit(self.surface, (self.pos.x, self.pos.y))
+        screen.blit(self.score_number, (self.pos.x + 45, self.pos.y))
 
 
 class FuelPad(pygame.sprite.Sprite):
@@ -149,7 +173,8 @@ class FuelPad(pygame.sprite.Sprite):
 
 def game():
     the_screen = Screen()
-    the_group = pygame.sprite.Group()
+    player_group = pygame.sprite.Group()
+    item_group = pygame.sprite.Group()
 
     player1 = Player(pygame.image.load("player1.png"), Vector2D(80, 495))
     player2 = Player(pygame.image.load("player2.png"), Vector2D(720, 495))
@@ -161,17 +186,18 @@ def game():
     fuel_pad1 = FuelPad(pygame.image.load("fuel_pad.png"), 80, 530)
     fuel_pad2 = FuelPad(pygame.image.load("fuel_pad.png"), 720, 530)
 
+    player1_score = Score("P1", Vector2D(10, 10))
+    player2_score = Score("P2", Vector2D(475, 10))
 
+    player_group.add(player1)
+    player_group.add(player2)
 
-    the_group.add(player1)
-    the_group.add(player2)
+    item_group.add(obstacle1)
+    item_group.add(obstacle2)
+    item_group.add(obstacle3)
 
-    the_group.add(obstacle1)
-    the_group.add(obstacle2)
-    the_group.add(obstacle3)
-
-    the_group.add(fuel_pad1)
-    the_group.add(fuel_pad2)
+    item_group.add(fuel_pad1)
+    item_group.add(fuel_pad2)
 
     while True:
         the_screen.fps_limit()
@@ -180,13 +206,16 @@ def game():
             if event.type == pygame.QUIT:
                 exit()
 
-        player1.rotate(pygame.K_a, pygame.K_d)
-        player2.rotate(pygame.K_LEFT, pygame.K_RIGHT)
+        print(pygame.sprite.spritecollideany(player1, item_group))
 
-        player1.accelerate(pygame.K_w, 5)
+        if pygame.sprite.spritecollideany(player1, item_group) is None:
+            player1.rotate(pygame.K_a, pygame.K_d)
+
+        if pygame.sprite.spritecollideany(player2, item_group) is None:
+            player2.rotate(pygame.K_LEFT, pygame.K_RIGHT)
+
+        player1.accelerate(pygame.K_w, 15)
         player1.grav()
-
-        print(pygame.sprite.collide_rect(player1, the_screen))
 
         player1.collide_obstacle(obstacle1)
         player1.collide_obstacle(obstacle2)
@@ -198,7 +227,7 @@ def game():
         player1.collide_fuel_pad(fuel_pad1)
         player1.collide_fuel_pad(fuel_pad2)
 
-        player2.accelerate(pygame.K_UP, 5)
+        player2.accelerate(pygame.K_UP, 15)
         player2.grav()
 
         player2.collide_obstacle(obstacle1)
@@ -211,16 +240,18 @@ def game():
         player2.collide_fuel_pad(fuel_pad1)
         player2.collide_fuel_pad(fuel_pad2)
 
-        the_group.update()
+        player1_score.update_score(player1.score)
+        player2_score.update_score(player2.score)
+
+        player_group.update()
         the_screen.render()
 
-        the_group.draw(the_screen.screen)
+        player_group.draw(the_screen.screen)
+        item_group.draw(the_screen.screen)
+        player1_score.draw_score(the_screen.screen)
+        player2_score.draw_score(the_screen.screen)
 
         pygame.display.flip()
-
-
-
-
 
 
 game()
