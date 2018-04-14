@@ -38,7 +38,11 @@ class Player(pygame.sprite.Sprite):
         self.velocity = Vector2D(0, 0)
 
         self.score = 0
-        self.fuel = 10000
+        self.fuel = starting_fuel
+
+        self.last_shot = pygame.time.get_ticks()
+        print(pygame.time.get_ticks())
+        self.cooldown = 500
 
     def rotate(self, left, right):
 
@@ -58,14 +62,16 @@ class Player(pygame.sprite.Sprite):
     def accelerate(self, up, max_speed):
 
         key = pygame.key.get_pressed()
+        angle = self.angle - 90
+        self.angle_rad = radians(angle)
 
         if not key[up]:
-            self.current_speed -= 0.05
+            self.current_speed -= 0.10
             if self.current_speed <= 0:
                 self.current_speed = 0
 
         if key[up]:
-            angle = self.angle - 90
+
             self.current_speed += 0.05
 
             self.fuel -= 10
@@ -73,7 +79,7 @@ class Player(pygame.sprite.Sprite):
             if self.current_speed >= max_speed:
                 self.current_speed = max_speed
 
-            self.angle_rad = math.radians(angle)
+
 
         if self.fuel > 0:
             self.velocity.x = self.current_speed * math.cos(self.angle_rad)
@@ -85,15 +91,24 @@ class Player(pygame.sprite.Sprite):
         else:
             self.fuel = 0
 
-    def fire(self, shoot, image, a_list):
+    def fire(self, shoot_key, image, a_list, a_group):
         key = pygame.key.get_pressed()
+        now = pygame.time.get_ticks()
 
-        if key[shoot]:
-            a_bullet = Bullet(image)
-            a_bullet.pos = Vector2D((self.rect.x - self.rect.center[0]), self.rect.top)
-            a_bullet.rect.center = (a_bullet.pos.x, a_bullet.pos.y)
+        if key[shoot_key]:
+            if now - self.last_shot >= self.cooldown:
+                self.last_shot = now
+                self.fuel -= 200
 
-            a_list.append(a_bullet)
+                a_bullet = Bullet(image)
+                a_bullet.pos = Vector2D(self.pos.x, self.pos.y)
+                a_bullet.velocity.x = 15 * math.cos(self.angle_rad)
+                a_bullet.velocity.y = 15 * math.sin(self.angle_rad)
+
+                a_bullet.rect.center = (a_bullet.pos.x, a_bullet.pos.y)
+
+                a_list.append(a_bullet)
+                a_group.add(a_bullet)
 
     def grav(self):
         self.pos.y += gravity
@@ -109,7 +124,7 @@ class Player(pygame.sprite.Sprite):
 
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
-            self.fuel = 10000
+            self.fuel = starting_fuel
 
             self.score -= 1
 
@@ -117,20 +132,19 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.collide_rect(self, fuel_pad):
 
             self.pos.y = self.original_pos.y
-            #print(self.angle)
 
             if self.pos.y <= fuel_pad.rect.top and self.angle < 340 and self.angle > 20:
-                #print("fired")
                 self.current_speed = 0
                 self.velocity = Vector2D(0, 0)
-                self.fuel = 10000
+                self.fuel = starting_fuel
 
                 self.pos.x = self.original_pos.x
 
                 self.score -= 1
 
-            if self.fuel < 10000:
-                self.fuel += 10
+            self.fuel += 20
+            if self.fuel >= starting_fuel:
+                self.fuel = starting_fuel
 
             self.rect.center = (self.pos.x, self.pos.y)
             self.image = self.image_original
@@ -146,7 +160,7 @@ class Player(pygame.sprite.Sprite):
 
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
-            self.fuel = 10000
+            self.fuel = starting_fuel
 
             self.score -= 1
 
@@ -160,10 +174,9 @@ class Player(pygame.sprite.Sprite):
 
             self.velocity = Vector2D(0, 0)
             self.current_speed = 0
-            self.fuel = 10000
+            self.fuel = starting_fuel
 
             other_player.score += 1
-
 
 
 class Obstacle(pygame.sprite.Sprite):
@@ -192,17 +205,19 @@ class Bullet(pygame.sprite.Sprite):
 
         self.image = image
 
+        self.velocity = Vector2D(0, 0)
         self.pos = Vector2D(0, 0)
         self.rect = self.image.get_rect()
 
-    def move_bullet(self, player_velocity):
-        self.pos += player_velocity * 4
+    def move(self):
+        self.pos += self.velocity
         self.rect.center = (self.pos.x, self.pos.y)
 
-    def collide_bullet(self, a_list, group):
-        if pygame.sprite.spritecollideany(self, group):
+    def collide(self, a_list, group, obstacle, collide=1):
+        if pygame.sprite.collide_rect(self, obstacle) == collide:
             group.remove(self)
-            a_list.remove(self)
+            if self in a_list:
+                a_list.remove(self)
 
 
 class UI:
@@ -211,7 +226,7 @@ class UI:
 
         self.name = name
         self.score = 0
-        self.fuel = 10000
+        self.fuel = starting_fuel
 
         self.font = pygame.font.SysFont("Times New Roman", 30)
         self.pos = Vector2D(pos.x, pos.y)
@@ -233,8 +248,10 @@ class UI:
 
 def game():
     the_screen = Screen()
-    player_group = pygame.sprite.Group()
-    item_group = pygame.sprite.Group()
+    the_group = pygame.sprite.Group()
+
+    bullet_list_p1 = []
+    bullet_list_p2 = []
 
     player1 = Player(pygame.image.load("player1.png"), Vector2D(80, 495))
     player2 = Player(pygame.image.load("player2.png"), Vector2D(720, 495))
@@ -249,15 +266,15 @@ def game():
     player1_score = UI("P1", Vector2D(10, 10))
     player2_score = UI("P2", Vector2D(475, 10))
 
-    player_group.add(player1)
-    player_group.add(player2)
+    the_group.add(player1)
+    the_group.add(player2)
 
-    item_group.add(obstacle1)
-    item_group.add(obstacle2)
-    item_group.add(obstacle3)
+    the_group.add(obstacle1)
+    the_group.add(obstacle2)
+    the_group.add(obstacle3)
 
-    item_group.add(fuel_pad1)
-    item_group.add(fuel_pad2)
+    the_group.add(fuel_pad1)
+    the_group.add(fuel_pad2)
 
     while True:
         the_screen.fps_limit()
@@ -272,6 +289,8 @@ def game():
         player1.accelerate(pygame.K_w, 15)
         player1.grav()
 
+        player1.fire(pygame.K_f, pygame.image.load("player1_bullet.png"), bullet_list_p1, the_group)
+
         player1.collide_obstacle(obstacle1)
         player1.collide_obstacle(obstacle2)
         player1.collide_obstacle(obstacle3)
@@ -284,6 +303,8 @@ def game():
 
         player2.accelerate(pygame.K_UP, 15)
         player2.grav()
+
+        player2.fire(pygame.K_RCTRL, pygame.image.load("player2_bullet.png"), bullet_list_p2, the_group)
 
         player2.collide_obstacle(obstacle1)
         player2.collide_obstacle(obstacle2)
@@ -298,15 +319,46 @@ def game():
         player1_score.update_ui(player1.score, player1.fuel)
         player2_score.update_ui(player2.score, player2.fuel)
 
-        player_group.update()
+        for bullets in bullet_list_p1:
+            bullets.move()
+
+            player2.collide_bullet(bullets, player1)
+            bullets.collide(bullet_list_p1, the_group, player2)
+
+            bullets.collide(bullet_list_p1, the_group, obstacle1)
+            bullets.collide(bullet_list_p1, the_group, obstacle2)
+            bullets.collide(bullet_list_p1, the_group, obstacle3)
+
+            bullets.collide(bullet_list_p1, the_group, the_screen, 0)
+
+            bullets.collide(bullet_list_p1, the_group, fuel_pad1)
+            bullets.collide(bullet_list_p1, the_group, fuel_pad2)
+
+        for bullets in bullet_list_p2:
+            bullets.move()
+
+            player1.collide_bullet(bullets, player2)
+            bullets.collide(bullet_list_p2, the_group, player1)
+
+            bullets.collide(bullet_list_p2, the_group, obstacle1)
+            bullets.collide(bullet_list_p2, the_group, obstacle2)
+            bullets.collide(bullet_list_p2, the_group, obstacle3)
+
+            bullets.collide(bullet_list_p2, the_group, the_screen, 0)
+
+            bullets.collide(bullet_list_p2, the_group, fuel_pad1)
+            bullets.collide(bullet_list_p2, the_group, fuel_pad2)
+
+        the_group.update()
         the_screen.render()
 
-        player_group.draw(the_screen.screen)
-        item_group.draw(the_screen.screen)
+        the_group.draw(the_screen.screen)
+        the_group.draw(the_screen.screen)
         player1_score.draw_ui(the_screen.screen)
         player2_score.draw_ui(the_screen.screen)
 
         pygame.display.flip()
 
 
-game()
+if __name__ == '__main__':
+    game()
