@@ -85,6 +85,16 @@ class Player(pygame.sprite.Sprite):
         else:
             self.fuel = 0
 
+    def fire(self, shoot, image, a_list):
+        key = pygame.key.get_pressed()
+
+        if key[shoot]:
+            a_bullet = Bullet(image)
+            a_bullet.pos = Vector2D((self.rect.x - self.rect.center[0]), self.rect.top)
+            a_bullet.rect.center = (a_bullet.pos.x, a_bullet.pos.y)
+
+            a_list.append(a_bullet)
+
     def grav(self):
         self.pos.y += gravity
         self.rect.center = (self.pos.x, self.pos.y)
@@ -139,6 +149,21 @@ class Player(pygame.sprite.Sprite):
             self.fuel = 10000
 
             self.score -= 1
+
+    def collide_bullet(self, bullet, other_player):
+        if pygame.sprite.collide_rect(self, bullet):
+            self.pos = self.original_pos
+
+            self.image = self.image_original
+            self.rect.center = (self.pos.x, self.pos.y)
+            self.angle = 0
+
+            self.velocity = Vector2D(0, 0)
+            self.current_speed = 0
+            self.fuel = 10000
+
+            other_player.score += 1
+
 
 
 class Obstacle(pygame.sprite.Sprite):
