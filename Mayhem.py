@@ -151,6 +151,35 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect.center = (pos_x, pos_y)
 
 
+class FuelPad(pygame.sprite.Sprite):
+    def __init__(self, image, pos_x, pos_y):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = image
+
+        self.rect = self.image.get_rect()
+        self.rect.center = (pos_x, pos_y)
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, image):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = image
+
+        self.pos = Vector2D(0, 0)
+        self.rect = self.image.get_rect()
+
+    def move_bullet(self, player_velocity):
+        self.pos += player_velocity * 4
+        self.rect.center = (self.pos.x, self.pos.y)
+
+    def collide_bullet(self, a_list, group):
+        if pygame.sprite.spritecollideany(self, group):
+            group.remove(self)
+            a_list.remove(self)
+
+
 class UI:
     def __init__(self, name, pos):
         pygame.font.init()
@@ -175,16 +204,6 @@ class UI:
     def draw_ui(self, screen):
         screen.blit(self.surface, (self.pos.x, self.pos.y))
         screen.blit(self.fuel_surface, (self.pos.x, self.pos.y + 25))
-
-
-class FuelPad(pygame.sprite.Sprite):
-    def __init__(self, image, pos_x, pos_y):
-        pygame.sprite.Sprite.__init__(self)
-
-        self.image = image
-
-        self.rect = self.image.get_rect()
-        self.rect.center = (pos_x, pos_y)
 
 
 def game():
