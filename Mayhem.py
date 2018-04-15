@@ -5,21 +5,29 @@ import math
 
 
 class Screen:
+    """ Implements the display."""
     def __init__(self):
         self.screen = pygame.display.set_mode(screen_res)
         self.fps = fps
 
         self.rect = self.screen.get_rect()
 
-    def render(self):
+    def update(self):
+        """ Updates the display for each frame."""
         self.screen.fill([0, 0, 0])
 
     def fps_limit(self):
+        """ Limits the maximum frames of the program."""
         clock = pygame.time.Clock()
         clock.tick(self.fps)
 
 
 class Player(pygame.sprite.Sprite):
+    """ Implements a player object.
+
+    :param image: An image representing the player.
+    :param pos_vec: A vector2D with the start position of the player.
+    """
     def __init__(self, image, pos_vec):
         pygame.sprite.Sprite.__init__(self)
 
@@ -41,10 +49,14 @@ class Player(pygame.sprite.Sprite):
         self.fuel = starting_fuel
 
         self.last_shot = pygame.time.get_ticks()
-        print(pygame.time.get_ticks())
         self.cooldown = 500
 
     def rotate(self, left, right):
+        """ Rotates the player.
+
+        :param left: A key for rotating left.
+        :param right: A key for rotating right.
+        """
 
         key = pygame.key.get_pressed()
         if key[left]:
@@ -60,6 +72,11 @@ class Player(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
 
     def accelerate(self, up, max_speed):
+        """ Accelerates the player forward based on angle.
+
+        :param up: A key for accelerating forward.
+        :param max_speed: The max reachable speed.
+        """
 
         key = pygame.key.get_pressed()
         angle = self.angle - 90
@@ -92,6 +109,13 @@ class Player(pygame.sprite.Sprite):
             self.fuel = 0
 
     def fire(self, shoot_key, image, a_list, a_group):
+        """ Fires a bullet from the player.
+
+        :param shoot_key: A key for shooting a bullet.
+        :param image: An image representing the bullet.
+        :param a_list: A list for holding the bullets.
+        :param a_group: A sprite group for rendering the bullets on screen.
+        """
         key = pygame.key.get_pressed()
         now = pygame.time.get_ticks()
 
@@ -111,10 +135,16 @@ class Player(pygame.sprite.Sprite):
                 a_group.add(a_bullet)
 
     def grav(self):
+        """ Constantly applies gravity to the players' position pulling them downwards."""
+
         self.pos.y += gravity
         self.rect.center = (self.pos.x, self.pos.y)
 
     def collide_obstacle(self, obstacle):
+        """ Destroys the player upon collision with an obstacle and decreases their score.
+
+        :param obstacle: An object to create collision with.
+        """
         if pygame.sprite.collide_rect(self, obstacle):
             self.pos = self.original_pos
 
@@ -129,11 +159,16 @@ class Player(pygame.sprite.Sprite):
             self.score -= 1
 
     def collide_fuel_pad(self, fuel_pad):
+        """ Refuels the players fuel if colliding at the correct angle otherwise destroys the player and decreases their
+        score.
+
+        :param fuel_pad: A fuel pad object to create collision with.
+        """
         if pygame.sprite.collide_rect(self, fuel_pad):
 
             self.pos.y = self.original_pos.y
 
-            if self.pos.y <= fuel_pad.rect.top and self.angle < 340 and self.angle > 20:
+            if self.pos.y <= fuel_pad.rect.top and 20 < self.angle < 340:
                 self.current_speed = 0
                 self.velocity = Vector2D(0, 0)
                 self.fuel = starting_fuel
@@ -151,6 +186,10 @@ class Player(pygame.sprite.Sprite):
             self.angle = 0
 
     def collide_screen(self, screen):
+        """ Destroy the player upon leaving screen boundaries.
+
+        :param screen: The screen to create collision with.
+        """
         if pygame.sprite.collide_rect(self, screen) == 0:
             self.pos = self.original_pos
 
@@ -165,6 +204,11 @@ class Player(pygame.sprite.Sprite):
             self.score -= 1
 
     def collide_bullet(self, bullet, other_player):
+        """ Destroy the player upon colliding the opponents bullet.
+
+        :param bullet: A bullet object to create collision with.
+        :param other_player: A player object to increase their score upon collision with their bullet.
+        """
         if pygame.sprite.collide_rect(self, bullet):
             self.pos = self.original_pos
 
@@ -180,6 +224,12 @@ class Player(pygame.sprite.Sprite):
 
 
 class Obstacle(pygame.sprite.Sprite):
+    """ Implements a obstacle object.
+
+    :param image: An image representing the obstacle.
+    :param pos_x: The x position of the obstacle.
+    :param pos_y: The y position of the obstacle.
+    """
     def __init__(self, image, pos_x, pos_y):
         pygame.sprite.Sprite.__init__(self)
 
@@ -190,6 +240,12 @@ class Obstacle(pygame.sprite.Sprite):
 
 
 class FuelPad(pygame.sprite.Sprite):
+    """ Implements a Fuel pad object.
+
+    :param image: An image representing the fuel pad.
+    :param pos_x: The x position of the fuel pad.
+    :param pos_y: The y position of the fuel pad.
+    """
     def __init__(self, image, pos_x, pos_y):
         pygame.sprite.Sprite.__init__(self)
 
@@ -200,6 +256,10 @@ class FuelPad(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
+    """ Implements a bullet object.
+
+    :param image: An image representing the bullet.
+    """
     def __init__(self, image):
         pygame.sprite.Sprite.__init__(self)
 
@@ -210,10 +270,18 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def move(self):
+        """ Moves the bullet in a straight line based on velocity vector."""
         self.pos += self.velocity
         self.rect.center = (self.pos.x, self.pos.y)
 
     def collide(self, a_list, group, obstacle, collide=1):
+        """ Removes the bullet upon collision with an obstacle.
+
+        :param a_list: A list containing a bullet for removal.
+        :param group: A group containing a bullet for removal.
+        :param obstacle: An obstacle object to create collision with.
+        :param collide: Takes 1 or 0. 1 to remove bullet upon collision. 0 to remove bullet when not colliding.
+        """
         if pygame.sprite.collide_rect(self, obstacle) == collide:
             group.remove(self)
             if self in a_list:
@@ -221,6 +289,11 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class UI:
+    """ Implements a user interface object for a player.
+
+    :param name: The name representing the player.
+    :param pos: The position of the text ui.
+    """
     def __init__(self, name, pos):
         pygame.font.init()
 
@@ -235,6 +308,11 @@ class UI:
         self.fuel_surface = None
 
     def update_ui(self, score, fuel):
+        """ Updates the ui based on variables the player holds.
+
+        :param score: The player objects' score.
+        :param fuel: The player objects' fuel.
+        """
         self.score = score
         self.fuel = fuel
 
@@ -242,11 +320,16 @@ class UI:
         self.fuel_surface = self.font.render("Fuel: " + str(self.fuel), 1, (255, 255, 255))
 
     def draw_ui(self, screen):
+        """ Draws the ui on the screen.
+
+        :param screen: A screen object to render ui text.
+        """
         screen.blit(self.surface, (self.pos.x, self.pos.y))
         screen.blit(self.fuel_surface, (self.pos.x, self.pos.y + 25))
 
 
 def game():
+    """ A function that initializes all objects and runs all appropriate functions for making the game run."""
     the_screen = Screen()
     the_group = pygame.sprite.Group()
 
@@ -350,7 +433,7 @@ def game():
             bullets.collide(bullet_list_p2, the_group, fuel_pad2)
 
         the_group.update()
-        the_screen.render()
+        the_screen.update()
 
         the_group.draw(the_screen.screen)
         the_group.draw(the_screen.screen)
