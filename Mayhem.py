@@ -39,15 +39,19 @@ class Player(pygame.sprite.Sprite):
         self.pos = self.original_pos
         self.rect.center = (self.pos.x, self.pos.y)
 
+        # For calculating the players angle
         self.angle = 0
         self.angle_rad = 0
 
+        # For calculating the players speed
         self.current_speed = 0
         self.velocity = Vector2D(0, 0)
 
+        # For the UI
         self.score = 0
         self.fuel = starting_fuel
 
+        # To prevent spam shooting
         self.last_shot = pygame.time.get_ticks()
         self.cooldown = 500
 
@@ -61,15 +65,15 @@ class Player(pygame.sprite.Sprite):
         key = pygame.key.get_pressed()
         if key[left]:
             self.angle -= 3
-            self.angle %= 360
-            self.image = pygame.transform.rotate(self.image_original, (self.angle * -1))
-            self.rect = self.image.get_rect(center=self.rect.center)
+            self.angle %= 360  # Prevents angle value from exceeding 360 degrees
+            self.image = pygame.transform.rotate(self.image_original, (self.angle * -1))  # Transform the player picture
+            self.rect = self.image.get_rect(center=self.rect.center)  # To prevent the player model from wobbling.
 
         if key[right]:
             self.angle += 3
-            self.angle %= 360
-            self.image = pygame.transform.rotate(self.image_original, (self.angle * -1))
-            self.rect = self.image.get_rect(center=self.rect.center)
+            self.angle %= 360  # Prevents angle value from exceeding 360 degrees
+            self.image = pygame.transform.rotate(self.image_original, (self.angle * -1))  # Transform the player picture
+            self.rect = self.image.get_rect(center=self.rect.center)  # To prevent the player model from wobbling.
 
     def accelerate(self, up, max_speed):
         """ Accelerates the player forward based on angle.
@@ -83,22 +87,21 @@ class Player(pygame.sprite.Sprite):
         self.angle_rad = radians(angle)
 
         if not key[up]:
-            self.current_speed -= 0.10
+            self.current_speed -= 0.10  # Gradually decreases speed when player is not accelerating
             if self.current_speed <= 0:
                 self.current_speed = 0
 
         if key[up]:
 
-            self.current_speed += 0.05
+            self.current_speed += 0.05  # Gradually increases speed when player is accelerating
 
             self.fuel -= 10
 
-            if self.current_speed >= max_speed:
+            if self.current_speed >= max_speed:  # To prevent speed from increasing infinitely
                 self.current_speed = max_speed
 
-
-
         if self.fuel > 0:
+            #  Accelerates based on angle variable.
             self.velocity.x = self.current_speed * math.cos(self.angle_rad)
             self.velocity.y = self.current_speed * math.sin(self.angle_rad)
 
@@ -122,15 +125,17 @@ class Player(pygame.sprite.Sprite):
         if key[shoot_key]:
             if now - self.last_shot >= self.cooldown:
                 self.last_shot = now
-                self.fuel -= 200
+                self.fuel -= 200  # Reduces fuel for each shot to encourage aiming before firing
 
                 a_bullet = Bullet(image)
                 a_bullet.pos = Vector2D(self.pos.x, self.pos.y)
+                #  Sets bullet velocity based on current angle of player
                 a_bullet.velocity.x = 15 * math.cos(self.angle_rad)
                 a_bullet.velocity.y = 15 * math.sin(self.angle_rad)
 
                 a_bullet.rect.center = (a_bullet.pos.x, a_bullet.pos.y)
 
+                # Adds bullet to list and sprite group
                 a_list.append(a_bullet)
                 a_group.add(a_bullet)
 
@@ -298,8 +303,6 @@ class UI:
         pygame.font.init()
 
         self.name = name
-        self.score = 0
-        self.fuel = starting_fuel
 
         self.font = pygame.font.SysFont("Times New Roman", 30)
         self.pos = Vector2D(pos.x, pos.y)
@@ -313,11 +316,8 @@ class UI:
         :param score: The player objects' score.
         :param fuel: The player objects' fuel.
         """
-        self.score = score
-        self.fuel = fuel
-
-        self.surface = self.font.render(self.name + ": " + str(self.score), 1, (255, 255, 255))
-        self.fuel_surface = self.font.render("Fuel: " + str(self.fuel), 1, (255, 255, 255))
+        self.surface = self.font.render(self.name + ": " + score, 1, (255, 255, 255))
+        self.fuel_surface = self.font.render("Fuel: " + fuel, 1, (255, 255, 255))
 
     def draw_ui(self, screen):
         """ Draws the ui on the screen.
@@ -326,6 +326,35 @@ class UI:
         """
         screen.blit(self.surface, (self.pos.x, self.pos.y))
         screen.blit(self.fuel_surface, (self.pos.x, self.pos.y + 25))
+
+
+class StringAdapter:
+    """ Converts player variables to string and renders ui on screen."""
+    def _number_value(self, number):
+        """ Converts variable.
+
+        :param number: Player variable.
+        :return: String of variable.
+        """
+        return str(number)
+
+    def __init__(self, name, pos):
+        self.ui = UI(name, pos)
+        self.score = ""
+        self.fuel = ""
+
+    def update(self, score, fuel, screen):
+        """ Runs update and draw function of UI class with converted strings.
+
+        :param score: The players' score variable
+        :param fuel: The players' fuel variable
+        :param screen: The screen UI should be rendered on
+        """
+        self.score = self._number_value(score)
+        self.fuel = self._number_value(fuel)
+
+        self.ui.update_ui(self.score, self.fuel)
+        self.ui.draw_ui(screen)
 
 
 def game():
@@ -346,8 +375,8 @@ def game():
     fuel_pad1 = FuelPad(pygame.image.load("fuel_pad.png"), 80, 530)
     fuel_pad2 = FuelPad(pygame.image.load("fuel_pad.png"), 720, 530)
 
-    player1_score = UI("P1", Vector2D(10, 10))
-    player2_score = UI("P2", Vector2D(475, 10))
+    player1_ui = StringAdapter("P1", Vector2D(10, 10))
+    player2_ui = StringAdapter("P2", Vector2D(475, 10))
 
     the_group.add(player1)
     the_group.add(player2)
@@ -399,10 +428,7 @@ def game():
         player2.collide_fuel_pad(fuel_pad1)
         player2.collide_fuel_pad(fuel_pad2)
 
-        player1_score.update_ui(player1.score, player1.fuel)
-        player2_score.update_ui(player2.score, player2.fuel)
-
-        for bullets in bullet_list_p1:
+        for bullets in bullet_list_p1:  # Applies functions for each bullet in the list
             bullets.move()
 
             player2.collide_bullet(bullets, player1)
@@ -417,7 +443,7 @@ def game():
             bullets.collide(bullet_list_p1, the_group, fuel_pad1)
             bullets.collide(bullet_list_p1, the_group, fuel_pad2)
 
-        for bullets in bullet_list_p2:
+        for bullets in bullet_list_p2:  # Applies functions for each bullet in the list
             bullets.move()
 
             player1.collide_bullet(bullets, player2)
@@ -437,8 +463,8 @@ def game():
 
         the_group.draw(the_screen.screen)
         the_group.draw(the_screen.screen)
-        player1_score.draw_ui(the_screen.screen)
-        player2_score.draw_ui(the_screen.screen)
+        player1_ui.update(player1.score, player1.fuel, the_screen.screen)
+        player2_ui.update(player2.score, player2.fuel, the_screen.screen)
 
         pygame.display.flip()
 
